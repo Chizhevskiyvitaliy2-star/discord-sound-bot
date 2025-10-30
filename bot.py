@@ -1,41 +1,51 @@
-import discord
-from discord.ext import commands
-import asyncio
+import os
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
-intents = discord.Intents.default()
-intents.message_content = True
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
-@bot.event
-async def on_ready():
-    print(f"✅ Bot is online as {bot.user}")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    await update.message.reply_text(f"Привіт, {user.first_name}! Я бот @VimatSoundBot. Натисни /menu.")
 
-@bot.command()
-async def join(ctx):
-    if ctx.author.voice:
-        channel = ctx.author.voice.channel
-        await channel.connect()
-        await ctx.send("🔊 Зайшов в голосовий канал.")
-    else:
-        await ctx.send("❗ Ти не в голосовому каналі!")
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("Пінг", callback_data="ping")],
+        [InlineKeyboardButton("Інформація", callback_data="info")]
+    ]
+    await update.message.reply_text("Меню:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-@bot.command()
-async def leave(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        await ctx.send("👋 Вийшов з голосового каналу.")
-    else:
-        await ctx.send("❗ Я не в голосовому каналі.")
+async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("Тільки для власника :)")
+        return
+    await update.message.reply_text("Адмін панель поки пуста, але буде 🔥")
 
-@bot.command()
-async def play(ctx):
-    voice = ctx.voice_client
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if query.data == "ping":
+        await query.edit_message_text("Pong ✅")
+    elif query.data == "info":
+        await query.edit_message_text("Я працюю 24/7 на Railway 🚚⚡")
 
-    if not voice:
-        return await ctx.send("❗ Спочатку напиши `!join`")
+def main():
+    if not TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN не встановлено!")
+        return
 
-    source = discord.FFmpegPCMAudio("sound.mp3")
-    voice.play(source)
-    await ctx.send("🎶 Відтворюю звук!")
-bot.run(7986165513:AAErq4a0HZg7CoyzyX0JRFHK-lso8uJg00Y_)
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", menu))
+    app.add_handler(CommandHandler("admin", admin_cmd))
+    app.add_handler(CallbackQueryHandler(button_handler))
+
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
