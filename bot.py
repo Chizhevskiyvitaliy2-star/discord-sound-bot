@@ -38,5 +38,4 @@ async def play(ctx):
     source = discord.FFmpegPCMAudio("sound.mp3")
     voice.play(source)
     await ctx.send("🎶 Відтворюю звук!")
-
-bot.run("YOUR_BOT_TOKEN_HERE")
+bot.run(7986165513:AAErq4a0HZg7CoyzyX0JRFHK-lso8uJg00Y_)
